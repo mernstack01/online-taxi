@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+
+  name      String
+  phone     String   @unique
+  password  String
+
+  role      String   @default("user")
+
+  createdAt DateTime @default(now())
+
+  orders Order[] @relation("UserOrders")
+
+  driverOrders Order[] @relation("DriverOrders")
+}
+
+model Order {
+  id        String   @id @default(uuid())
+
+  from      String
+  to        String
+
+  status    String   @default("pending")
+
+  userId    String
+  driverId  String?
+
+  createdAt DateTime @default(now())
+
+  user User @relation("UserOrders", fields: [userId], references: [id])
+
+  driver User? @relation("DriverOrders", fields: [driverId], references: [id])
+}
