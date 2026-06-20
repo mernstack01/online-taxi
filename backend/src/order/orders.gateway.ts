@@ -12,7 +12,7 @@ import {
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
-import { DriverRegistryService } from '../common/services/driver-registry.service';
+import { DriverRegistryService } from '../drivers/driver-registry.service';
 
 @WebSocketGateway({
     cors: {
@@ -25,7 +25,7 @@ export class OrdersGateway
     OnGatewayDisconnect {
     constructor(
         private jwtService: JwtService,
-        private driverRegistry: DriverRegistryService,
+        private registry: DriverRegistryService,
     ) { }
 
     @WebSocketServer()
@@ -74,7 +74,7 @@ export class OrdersGateway
 
         client.join('drivers');
 
-        this.driverRegistry.setOnlineDriver(
+        this.registry.setOnlineDriver(
             user.sub,
             client.id,
         );
@@ -101,16 +101,14 @@ export class OrdersGateway
             return;
         }
 
-        this.driverRegistry.setDriverLocation(
+        this.registry.updateLocation(
             user.sub,
-            {
-                lat: data.lat,
-                lng: data.lng,
-            },
+            data.lat,
+            data.lng,
         );
 
         console.log(
-            this.driverRegistry.getDriverLocations(),
+            this.registry.getDriverLocations(),
         );
     }
 
@@ -124,7 +122,7 @@ export class OrdersGateway
             return;
         }
 
-        this.driverRegistry.removeDriver(
+        this.registry.removeOnlineDriver(
             user.sub,
         );
 

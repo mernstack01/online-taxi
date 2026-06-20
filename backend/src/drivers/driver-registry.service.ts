@@ -1,17 +1,18 @@
 import { Injectable } from '@nestjs/common';
 
-type DriverLocation = {
-    lat: number;
-    lng: number;
-};
-
 @Injectable()
 export class DriverRegistryService {
     private onlineDrivers =
         new Map<string, string>();
 
     private driverLocations =
-        new Map<string, DriverLocation>();
+        new Map<
+            string,
+            {
+                lat: number;
+                lng: number;
+            }
+        >();
 
     setOnlineDriver(
         driverId: string,
@@ -23,17 +24,9 @@ export class DriverRegistryService {
         );
     }
 
-    setDriverLocation(
+    removeOnlineDriver(
         driverId: string,
-        location: DriverLocation,
     ) {
-        this.driverLocations.set(
-            driverId,
-            location,
-        );
-    }
-
-    removeDriver(driverId: string) {
         this.onlineDrivers.delete(
             driverId,
         );
@@ -43,7 +36,25 @@ export class DriverRegistryService {
         );
     }
 
+    updateLocation(
+        driverId: string,
+        lat: number,
+        lng: number,
+    ) {
+        this.driverLocations.set(
+            driverId,
+            {
+                lat,
+                lng,
+            },
+        );
+    }
+
     getDriverLocations() {
         return this.driverLocations;
+    }
+
+    getOnlineDrivers() {
+        return this.onlineDrivers;
     }
 }
