@@ -2,12 +2,14 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersGateway } from './orders.gateway';
+import { DriverRegistryService } from '../common/services/driver-registry.service';
 
 @Injectable()
 export class OrderService {
   constructor(
     private prisma: PrismaService,
-    private gateway: OrdersGateway
+    private gateway: OrdersGateway,
+    private driverRegistry: DriverRegistryService
   ) { }
 
   async create(dto: CreateOrderDto, userId: string) {
@@ -38,6 +40,11 @@ export class OrderService {
     this.gateway.server
       .to('drivers')
       .emit('newOrder', order);
+
+    const drivers =
+      this.driverRegistry.getDriverLocations();
+
+    console.log(drivers);
       
     return order;
   }
