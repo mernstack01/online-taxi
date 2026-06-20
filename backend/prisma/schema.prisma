@@ -28,6 +28,9 @@ model Order {
   from      String
   to        String
 
+  pickupLat Float
+  pickupLng Float
+
   status    String   @default("pending")
 
   userId    String

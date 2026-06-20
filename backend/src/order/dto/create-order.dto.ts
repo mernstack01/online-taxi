@@ -1,4 +1,8 @@
-import { IsString, MinLength } from 'class-validator';
+import {
+  IsNumber,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class CreateOrderDto {
   @IsString()
@@ -8,4 +12,10 @@ export class CreateOrderDto {
   @IsString()
   @MinLength(2)
   to!: string;
+
+  @IsNumber()
+  pickupLat!: number;
+
+  @IsNumber()
+  pickupLng!: number;
 }

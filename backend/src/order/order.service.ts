@@ -1,15 +1,23 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
+} from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersGateway } from './orders.gateway';
-import { DriverRegistryService } from '../drivers/driver-registry.service';
+import { DispatchService } from '../dispatch/dispatch.service';
 
 @Injectable()
 export class OrderService {
   constructor(
     private prisma: PrismaService,
     private gateway: OrdersGateway,
-    private registry: DriverRegistryService
+
+    @Inject(forwardRef(() => DispatchService))
+    private dispatch: DispatchService,
   ) { }
 
   async create(dto: CreateOrderDto, userId: string) {
@@ -30,6 +38,8 @@ export class OrderService {
       data: {
         from: dto.from,
         to: dto.to,
+        pickupLat: dto.pickupLat,
+        pickupLng: dto.pickupLng,
         userId,
       },
       include: {
@@ -37,14 +47,7 @@ export class OrderService {
       },
     });
 
-    this.gateway.server
-      .to('drivers')
-      .emit('newOrder', order);
-
-    const drivers =
-      this.registry.getDriverLocations();
-
-    console.log(drivers);
+    await this.dispatch.dispatchOrder(order);
       
     return order;
   }
