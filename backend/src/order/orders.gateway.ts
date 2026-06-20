@@ -13,6 +13,7 @@ import {
 
 import { Server, Socket } from 'socket.io';
 import { DriverRegistryService } from '../drivers/driver-registry.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @WebSocketGateway({
     cors: {
@@ -26,6 +27,7 @@ export class OrdersGateway
     constructor(
         private jwtService: JwtService,
         private registry: DriverRegistryService,
+        private prisma: PrismaService,
     ) { }
 
     @WebSocketServer()
@@ -81,11 +83,12 @@ export class OrdersGateway
     }
 
     @SubscribeMessage('driverLocation')
-    updateLocation(
+    async updateLocation(
         @MessageBody()
         data: {
             lat: number;
             lng: number;
+            orderId?: string;
         },
 
         @ConnectedSocket()
@@ -107,9 +110,135 @@ export class OrdersGateway
             data.lng,
         );
 
-        console.log(
-            this.registry.getDriverLocations(),
-        );
+        if (data.orderId) {
+            const order =
+                await this.prisma.order.findUnique({
+                    where: {
+                        id: data.orderId,
+                    },
+                });
+
+            if (order) {
+                this.server
+                    .to(`user_${order.userId}`)
+                    .emit('driverLocationUpdate', {
+                        lat: data.lat,
+                        lng: data.lng,
+                        orderId: data.orderId,
+                    });
+            }
+        }
+    }
+
+    @SubscribeMessage('orderArrived')
+    async orderArrived(
+        @MessageBody()
+        data: {
+            orderId: string;
+        },
+
+        @ConnectedSocket()
+        client: Socket,
+    ) {
+        const user =
+            client.data.user;
+
+        if (
+            !user ||
+            user.role !== 'driver'
+        ) {
+            return;
+        }
+
+        const order =
+            await this.prisma.order.update({
+                where: {
+                    id: data.orderId,
+                },
+                data: {
+                    status: 'arrived',
+                },
+            });
+
+        this.server
+            .to(`user_${order.userId}`)
+            .emit('orderArrived', order);
+
+        return order;
+    }
+
+    @SubscribeMessage('orderStarted')
+    async orderStarted(
+        @MessageBody()
+        data: {
+            orderId: string;
+        },
+
+        @ConnectedSocket()
+        client: Socket,
+    ) {
+        const user =
+            client.data.user;
+
+        if (
+            !user ||
+            user.role !== 'driver'
+        ) {
+            return;
+        }
+
+        const order =
+            await this.prisma.order.update({
+                where: {
+                    id: data.orderId,
+                },
+                data: {
+                    status: 'started',
+                },
+            });
+
+        this.server
+            .to(`user_${order.userId}`)
+            .emit('orderStarted', order);
+
+        return order;
+    }
+
+    @SubscribeMessage('orderCompleted')
+    async orderCompleted(
+        @MessageBody()
+        data: {
+            orderId: string;
+        },
+
+        @ConnectedSocket()
+        client: Socket,
+    ) {
+        const user =
+            client.data.user;
+
+        if (
+            !user ||
+            user.role !== 'driver'
+        ) {
+            return;
+        }
+
+        const order =
+            await this.prisma.order.update({
+                where: {
+                    id: data.orderId,
+                },
+                data: {
+                    status: 'completed',
+                },
+            });
+
+        this.server
+            .to(`user_${order.userId}`)
+            .emit('orderCompleted', order);
+
+        return order;
     }
 
     handleDisconnect(

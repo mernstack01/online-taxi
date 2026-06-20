@@ -102,9 +102,26 @@ export class OrderService {
 
     if (result.count === 0) {
       throw new BadRequestException(
-        'Order already accepted',
+        'Order already taken',
       );
     }
+
+    const updatedOrder =
+      await this.prisma.order.findUnique({
+        where: {
+          id: orderId,
+        },
+        include: {
+          user: true,
+        },
+      });
+
+    const driverIds =
+      this.dispatch
+        .getDispatchedDriverIds(orderId)
+        .filter(
+          (id) => id !== driverId,
+        );
 
     this.gateway.server
       .to(`user_${order.userId}`)
@@ -113,8 +130,11 @@ export class OrderService {
         driverId,
       });
 
-    return {
-      success: true,
-    };
+    this.dispatch.cancelOrder(
+      orderId,
+      driverIds,
+    );
+
+    return updatedOrder;
   }
 }
