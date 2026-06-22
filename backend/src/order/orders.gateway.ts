@@ -150,19 +150,23 @@ export class OrdersGateway
             return;
         }
 
-        const order =
-            await this.prisma.order.update({
-                where: {
-                    id: data.orderId,
-                },
-                data: {
-                    status: 'arrived',
-                },
-            });
+        const order = await this.updateAssignedOrderStatus(
+            data.orderId,
+            user.sub,
+            'arrived',
+        );
+
+        if (!order) {
+            return;
+        }
 
         this.server
             .to(`user_${order.userId}`)
             .emit('orderArrived', order);
+
+        this.server
+            .to(`user_${order.userId}`)
+            .emit('orderStatusChanged', order);
 
         return order;
     }
@@ -187,19 +191,23 @@ export class OrdersGateway
             return;
         }
 
-        const order =
-            await this.prisma.order.update({
-                where: {
-                    id: data.orderId,
-                },
-                data: {
-                    status: 'started',
-                },
-            });
+        const order = await this.updateAssignedOrderStatus(
+            data.orderId,
+            user.sub,
+            'started',
+        );
+
+        if (!order) {
+            return;
+        }
 
         this.server
             .to(`user_${order.userId}`)
             .emit('orderStarted', order);
+
+        this.server
+            .to(`user_${order.userId}`)
+            .emit('orderStatusChanged', order);
 
         return order;
     }
@@ -224,21 +232,52 @@ export class OrdersGateway
             return;
         }
 
-        const order =
-            await this.prisma.order.update({
-                where: {
-                    id: data.orderId,
-                },
-                data: {
-                    status: 'completed',
-                },
-            });
+        const order = await this.updateAssignedOrderStatus(
+            data.orderId,
+            user.sub,
+            'completed',
+        );
+
+        if (!order) {
+            return;
+        }
 
         this.server
             .to(`user_${order.userId}`)
             .emit('orderCompleted', order);
 
+        this.server
+            .to(`user_${order.userId}`)
+            .emit('orderStatusChanged', order);
+
         return order;
+    }
+
+    private async updateAssignedOrderStatus(
+        orderId: string,
+        driverId: string,
+        status: 'arrived' | 'started' | 'completed',
+    ) {
+        const order =
+            await this.prisma.order.findFirst({
+                where: {
+                    id: orderId,
+                    driverId,
+                },
+            });
+
+        if (!order) {
+            return null;
+        }
+
+        return this.prisma.order.update({
+            where: {
+                id: orderId,
+            },
+            data: {
+                status,
+            },
+        });
     }
 
     handleDisconnect(

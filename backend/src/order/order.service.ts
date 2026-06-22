@@ -9,6 +9,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrdersGateway } from './orders.gateway';
 import { DispatchService } from '../dispatch/dispatch.service';
+import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class OrderService {
@@ -130,10 +131,75 @@ export class OrderService {
         driverId,
       });
 
+    this.gateway.server
+      .to(`user_${order.userId}`)
+      .emit('orderStatusChanged', updatedOrder);
+
     this.dispatch.cancelOrder(
       orderId,
       driverIds,
     );
+
+    return updatedOrder;
+  }
+
+  async updateDriverStatus(
+    orderId: string,
+    driverId: string,
+    status: Extract<OrderStatus, 'arrived' | 'started' | 'completed' | 'cancelled'>,
+  ) {
+    const order =
+      await this.prisma.order.findUnique({
+        where: {
+          id: orderId,
+        },
+        select: {
+          driverId: true,
+          userId: true,
+        },
+      });
+
+    if (!order) {
+      throw new NotFoundException(
+        'Order not found',
+      );
+    }
+
+    if (order.driverId !== driverId) {
+      throw new BadRequestException(
+        'Order is not assigned to this driver',
+      );
+    }
+
+    const updatedOrder =
+      await this.prisma.order.update({
+        where: {
+          id: orderId,
+        },
+        data: {
+          status,
+        },
+        include: {
+          user: true,
+        },
+      });
+
+    const eventName =
+      status === 'arrived'
+        ? 'orderArrived'
+        : status === 'started'
+          ? 'orderStarted'
+          : status === 'completed'
+            ? 'orderCompleted'
+            : 'orderCancelled';
+
+    this.gateway.server
+      .to(`user_${order.userId}`)
+      .emit(eventName, updatedOrder);
+
+    this.gateway.server
+      .to(`user_${order.userId}`)
+      .emit('orderStatusChanged', updatedOrder);
 
     return updatedOrder;
   }

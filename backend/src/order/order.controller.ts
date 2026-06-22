@@ -39,9 +39,77 @@ export class OrderController {
     );
   }
 
+  @Patch(':id/arrived')
+  @UseGuards(
+    JwtAuthGuard,
+    RolesGuard
+  )
+  @Roles('driver')
+  markArrived(
+    @Param('id') orderId: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.orderService.updateDriverStatus(
+      orderId,
+      user.userId,
+      'arrived',
+    );
+  }
+
+  @Patch(':id/start')
+  @UseGuards(
+    JwtAuthGuard,
+    RolesGuard
+  )
+  @Roles('driver')
+  startTrip(
+    @Param('id') orderId: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.orderService.updateDriverStatus(
+      orderId,
+      user.userId,
+      'started',
+    );
+  }
+
+  @Patch(':id/complete')
+  @UseGuards(
+    JwtAuthGuard,
+    RolesGuard
+  )
+  @Roles('driver')
+  completeTrip(
+    @Param('id') orderId: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.orderService.updateDriverStatus(
+      orderId,
+      user.userId,
+      'completed',
+    );
+  }
+
   @Get('available')
   @UseGuards(JwtAuthGuard)
   availableOrders() {
     return this.orderService.availableOrders();
+  }
+
+  @Patch(':id/cancel')
+  @UseGuards(
+    JwtAuthGuard,
+    RolesGuard
+  )
+  @Roles('driver')
+  cancelTrip(
+    @Param('id') orderId: string,
+    @CurrentUser() user: JwtUser,
+  ) {
+    return this.orderService.updateDriverStatus(
+      orderId,
+      user.userId,
+      'cancelled',
+    );
   }
 }
